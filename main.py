@@ -1,7 +1,4 @@
 """
-Face Profile Manager with Emotion Tracking
-Terminal-driven interactive menu — runs continuously until you choose Exit.
-
 Requirements:
     pip install deepface opencv-python numpy
 """
@@ -45,9 +42,6 @@ def _sanitise_emotions(emotions: dict) -> dict:
     return {k: float(v) for k, v in emotions.items()}
 
 
-# ══════════════════════════════════════════════════════════════════════
-#  Configuration
-# ══════════════════════════════════════════════════════════════════════
 
 PROFILES_DIR        = Path("profiles")
 SESSION_LOG         = Path("session_log.json")
@@ -99,7 +93,7 @@ def confirm(msg: str) -> bool:
     return ans in ("y", "yes")
 
 def pause():
-    input(f"\n{C_DIM}Press Enter to continue…{C_RESET}")
+    input(f"\n{C_DIM}Enter para continuar…{C_RESET}")
 
 def choose_menu(title: str, options: list[str]) -> int:
     """Print a numbered menu, return 0-based index of chosen option."""
@@ -107,15 +101,11 @@ def choose_menu(title: str, options: list[str]) -> int:
     for i, opt in enumerate(options, 1):
         print(f"  {C_BOLD}{i}{C_RESET}. {opt}")
     while True:
-        raw = prompt(f"Enter choice (1–{len(options)}): ")
+        raw = prompt(f"Opcion entre (1–{len(options)}): ")
         if raw.isdigit() and 1 <= int(raw) <= len(options):
             return int(raw) - 1
-        err(f"Please enter a number between 1 and {len(options)}.")
+        err(f"Por favor ingresa un numero entre 1 y {len(options)}.")
 
-
-# ══════════════════════════════════════════════════════════════════════
-#  Profile Store
-# ══════════════════════════════════════════════════════════════════════
 
 class ProfileStore:
     def __init__(self, profiles_dir: Path = PROFILES_DIR):
@@ -321,7 +311,7 @@ class CameraSession:
     def _loop(self):
         cap = cv2.VideoCapture(self.camera_index)
         if not cap.isOpened():
-            err(f"Cannot open camera {self.camera_index}")
+            err(f"error al abrir la camara {self.camera_index}")
             return
 
         frame_count = 0
@@ -359,7 +349,7 @@ class CameraSession:
                 display = frame.copy()
                 for res in self._last_results:
                     self._draw(display, res)
-                cv2.imshow("Face Profile Manager  [press Q in this window to stop camera]", display)
+                cv2.imshow("Face Profile Manager  [presiona Q para salir de esta ventana]", display)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     self._stop_event.set()
@@ -427,13 +417,13 @@ class App:
             choice = choose_menu(
                 f"Main Menu  [camera: {cam_label}]",
                 [
-                    "Start / Stop camera",
-                    "Register a new profile",
-                    "Add face sample to existing profile",
-                    "List profiles",
-                    "Delete a profile",
-                    "Session emotion summary",
-                    "Session history (all past sessions)",
+                    "iniciar / apagar camara",
+                    "Registrar nuevo perfil",
+                    "Agregar muestra a perfil existente",
+                    "Lista de perfiles existentes",
+                    "Borrar perfil",
+                    "Resumen de sesión actual",
+                    "Historial de sesiones anteriores",
                     "Exit",
                 ],
             )
@@ -457,27 +447,27 @@ class App:
 
     def _menu_camera(self):
         if self._cam_on():
-            if confirm("Camera is running. Stop it?"):
+            if confirm("Cámara está encendida. ¿Detenerla?"):
                 self.camera.stop()
                 self.camera = None
-                ok("Camera stopped.")
+                ok("camara apagada.")
         else:
             raw = prompt("Camera index [0]: ")
             idx = int(raw) if raw.isdigit() else 0
             self.camera = CameraSession(self.engine, self.session, self.store, idx)
             self.camera.start()
-            ok("Camera started — a preview window will open.")
-            info("You can keep using this menu while the camera runs.")
-            info("Press Q inside the camera window to stop it from there.")
+            ok("Camara iniciada.")
+            info("Puedes seguir usando este menu mientras la camara está activa.")
+            info("Presiona Q en la ventana de la camara para detenerla, o usa esta opción de nuevo.")
         pause()
 
     # ── Register new profile ──────────────────────────────────────────
 
     def _menu_register(self):
-        section("Register New Profile")
-        name = prompt("Full name for this profile: ")
+        section("Nuevo perfil")
+        name = prompt("Nombre del perfil: ")
         if not name:
-            err("Name cannot be empty.")
+            err("Nombre no puede estar vacio.")
             pause()
             return
 
@@ -514,7 +504,7 @@ class App:
         section("Add Face Sample")
         profiles = self.store.list_profiles()
         if not profiles:
-            err("No profiles saved yet.")
+            err("Aun no hay perfiles guardados. Registra un perfil nuevo primero (opcion 2).")
             pause()
             return
 
@@ -554,10 +544,10 @@ class App:
     # ── List profiles ─────────────────────────────────────────────────
 
     def _menu_list_profiles(self):
-        section("Saved Profiles")
+        section("Perfiles guardados")
         profiles = self.store.list_profiles()
         if not profiles:
-            info("No profiles saved yet.")
+            info("Aun no hay perfiles guardados.")
         else:
             for p in profiles:
                 samples  = len(self.store.get_face_paths(p["id"]))
@@ -573,10 +563,10 @@ class App:
     # ── Delete profile ────────────────────────────────────────────────
 
     def _menu_delete_profile(self):
-        section("Delete Profile")
+        section("Borrar perfil")
         profiles = self.store.list_profiles()
         if not profiles:
-            err("No profiles to delete.")
+            err("No hay perfiles para borrar.")
             pause()
             return
 
@@ -597,7 +587,7 @@ class App:
         section(f"Session Summary  [{self.session.session_id}]")
         summaries = self.session.all_summaries()
         if not summaries:
-            info("No emotion readings yet. Start the camera to collect data.")
+            info("Sin datos registrados en esta sesión aún.")
         else:
             for s in summaries:
                 profile = self.store.get_profile(s["profile_id"])
@@ -620,7 +610,7 @@ class App:
     def _menu_history(self):
         section("Historical Sessions")
         if not SESSION_LOG.exists():
-            info("No session history found yet.")
+            info("Aun no hay sesiones registradas.")
             pause()
             return
 
@@ -654,9 +644,9 @@ class App:
 
     def _shutdown(self, interrupted: bool = False):
         """Cleanly stop everything, save, and hard-exit."""
-        section("Shutting Down")
+        section("Apagando…")
         if self._cam_on():
-            info("Stopping camera…")
+            info("Deteniendo camara…")
             self.camera.stop()
         # Ensure all OpenCV windows are gone (safe here — we're on the main thread)
         cv2.destroyAllWindows()
@@ -689,7 +679,7 @@ class App:
     def _pick_profile(self, profiles: list[dict]) -> dict | None:
         names = [f"{p['name']}  {C_DIM}({p['id']}){C_RESET}" for p in profiles]
         names.append("← Back")
-        idx = choose_menu("Select profile", names)
+        idx = choose_menu("Seleccionar perfil", names)
         if idx == len(profiles):
             return None
         return profiles[idx]
